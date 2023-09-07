@@ -11,6 +11,7 @@ contract FlightSuretyData {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
+    mapping (address => bool) private Airlines;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -27,6 +28,7 @@ contract FlightSuretyData {
                                 public 
     {
         contractOwner = msg.sender;
+        Airlines[contractOwner] = true;
     }
 
     /********************************************************************************************/
@@ -55,6 +57,27 @@ contract FlightSuretyData {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
     }
+
+     /**
+    * @dev Modifier that requires an "Arline" account to be the function caller
+    */
+    modifier requireAirline()
+    {
+        require(Airlines[msg.sender], "Caller is not an Airline");
+        _;
+    }
+
+     /**
+    * @dev Modifier that requires A "Passenger" account to be the function caller
+    
+    modifier requirePassenger()
+    {
+        require(msg.sender == "Passenger", "Caller is not a Passenger");
+        _;
+    } */
+
+    
+    
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
@@ -89,6 +112,20 @@ contract FlightSuretyData {
         operational = mode;
     }
 
+        /**
+    * @dev Get Airline status
+    *
+    * @return A bool that is the current Airline status
+    */      
+    function isAirline() 
+                            public 
+                            view 
+                            returns(bool) 
+    {
+        return Airlines[msg.sender];
+    }
+
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -98,11 +135,12 @@ contract FlightSuretyData {
     *      Can only be called from FlightSuretyApp contract
     *
     */   
-    function registerAirline
+    function registerAirline 
                             (   
                             )
                             external
-                            pure
+                            view
+                            requireAirline
     {
     }
 
