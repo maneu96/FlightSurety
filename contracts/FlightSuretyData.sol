@@ -1,8 +1,9 @@
 pragma solidity ^0.4.25;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./AirlineRole.sol";
 
-contract FlightSuretyData {
+contract FlightSuretyData is AirlineRole {
     using SafeMath for uint256;
 
     /********************************************************************************************/
@@ -11,7 +12,7 @@ contract FlightSuretyData {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
-    mapping (address => bool) private Airlines;
+    
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -28,7 +29,7 @@ contract FlightSuretyData {
                                 public 
     {
         contractOwner = msg.sender;
-        Airlines[contractOwner] = true;
+        //Airlines.push(msg.sender);
     }
 
     /********************************************************************************************/
@@ -63,7 +64,7 @@ contract FlightSuretyData {
     */
     modifier requireAirline()
     {
-        require(Airlines[msg.sender], "Caller is not an Airline");
+        require(isAirline(msg.sender), "Caller is not an Airline");
         _;
     }
 
@@ -110,19 +111,6 @@ contract FlightSuretyData {
                             requireContractOwner 
     {
         operational = mode;
-    }
-
-        /**
-    * @dev Get Airline status
-    *
-    * @return A bool that is the current Airline status
-    */      
-    function isAirline() 
-                            public 
-                            view 
-                            returns(bool) 
-    {
-        return Airlines[msg.sender];
     }
 
 
