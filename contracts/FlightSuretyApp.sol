@@ -28,7 +28,8 @@ contract FlightSuretyApp {
 
     address private contractOwner;          // Account used to deploy contract
     bool private operational = true; 
-    uint N; //Number of required signatures (Multiparty Consensus)
+    uint nrAirlines;
+    uint private N = 1; //Number of required signatures (Multiparty Consensus)
     
     struct Flight {
         bool isRegistered;
@@ -92,6 +93,7 @@ contract FlightSuretyApp {
     {
         contractOwner = msg.sender;
         data = FlightSuretyData(_dataContractAddress);
+        nrAirlines = 1;
     }
 
     /********************************************************************************************/
@@ -123,7 +125,6 @@ contract FlightSuretyApp {
                             requireAirline()
                             returns(bool success, uint votes)
     {
-
         votes = airlineQueue[_newAirline].whoVoted.length;
         if (votes >= N)
         {
@@ -150,6 +151,11 @@ contract FlightSuretyApp {
         require (value == 32 ether, "Airlines need to fund 32 ETH") ;
         data.fund.value(msg.value);
         data.registerAirline(msg.sender);
+        ++ nrAirlines;
+        if(nrAirlines >= 5)
+        {
+            N = nrAirlines - 2;
+        }
         return true;
     }
    /**

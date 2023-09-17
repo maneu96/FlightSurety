@@ -74,7 +74,7 @@ contract('Flight Surety Tests', async (accounts) => {
   it('(airline) cannot register an Airline using registerAirline() if it is not funded', async () => {
     
     // ARRANGE
-    let newAirline = accounts[2];
+    let newAirline = accounts[1];
 
     // ACT
     try {
@@ -93,5 +93,35 @@ contract('Flight Surety Tests', async (accounts) => {
     assert.equal(result2, true, "Airline should to register another airline if it has provided funding");
   });
  
+  it('(airline is only registered if enough votes are cast', async() =>{
+    let newAirline2 = accounts[2];
+    let newAirline3 = accounts[3];
+    let newAirline4 = accounts[4];
+    let newAirline5 = accounts[5];
+    let newAirline6 = accounts[6];
+    
+    await config.flightSuretyApp.registerAirline(newAirline2, {from: config.owner});
+    await config.flightSuretyApp.airlineFund({from: newAirline2, value: web3.utils.toWei("32")});
+    let result2 = await config.flightSuretyData.isAirline.call(newAirline2);
+    assert.equal(result2, true, "Airline should to register another airline if it has provided funding");
 
+    await config.flightSuretyApp.registerAirline(newAirline3, {from: config.owner});
+    await config.flightSuretyApp.airlineFund({from: newAirline3, value: web3.utils.toWei("32")});
+    let result4 = await config.flightSuretyData.isAirline.call(newAirline3);
+    assert.equal(result4, true, "Airline should to register another airline if it has provided funding");
+    
+
+    await config.flightSuretyApp.registerAirline(newAirline4, {from: config.owner});
+    await config.flightSuretyApp.airlineFund({from: newAirline4, value: web3.utils.toWei("32")});
+    let result5 = await config.flightSuretyData.isAirline.call(newAirline4);
+    assert.equal(result5, true, "Airline should to register another airline if it has provided funding");
+
+    await config.flightSuretyApp.registerAirline(newAirline5, {from: newAirline4});
+    await config.flightSuretyApp.registerAirline(newAirline5, {from: newAirline2});
+    await config.flightSuretyApp.registerAirline(newAirline5, {from: newAirline3});
+
+    await config.flightSuretyApp.airlineFund({from: newAirline5, value: web3.utils.toWei("32")});
+    let result6 = await config.flightSuretyData.isAirline.call(newAirline5);
+    assert.equal(result5, true, "Airline should to register another airline if it has provided funding");
+});
 });
