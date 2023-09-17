@@ -5,13 +5,14 @@ pragma solidity ^0.4.25;
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./FlightSuretyData.sol";
 
 /************************************************** */
 /* FlightSurety Smart Contract                      */
 /************************************************** */
 contract FlightSuretyApp {
     using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
-
+    FlightSuretyData private data;
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
@@ -23,9 +24,11 @@ contract FlightSuretyApp {
     uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
+    
 
     address private contractOwner;          // Account used to deploy contract
     bool private operational = true; 
+    uint N; //Number of required signatures (Multiparty Consensus)
     
     struct Flight {
         bool isRegistered;
@@ -35,7 +38,11 @@ contract FlightSuretyApp {
     }
     mapping(bytes32 => Flight) private flights;
 
- 
+    struct AirlineCandidate{
+        bool funded;
+        address [] whoVoted;
+    }
+    mapping (address => AirlineCandidate) private airlineQueue;
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -63,6 +70,11 @@ contract FlightSuretyApp {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
     }
+    modifier requireAirline()
+    {
+        require(data.isAirline(msg.sender), "Caller does not have airline privileges");
+        _;
+    }
 
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
@@ -74,10 +86,12 @@ contract FlightSuretyApp {
     */
     constructor
                                 (
+                                address _dataContractAddress
                                 ) 
                                 public 
     {
         contractOwner = msg.sender;
+        data = FlightSuretyData(_dataContractAddress);
     }
 
     /********************************************************************************************/
@@ -102,17 +116,42 @@ contract FlightSuretyApp {
     *
     */   
     function registerAirline
-                            (   
+                            (  
+                                address _newAirline 
                             )
                             external
-                            pure
-                            returns(bool success, uint256 votes)
+                            requireAirline()
+                            returns(bool success, uint votes)
     {
+
+        votes = airlineQueue[_newAirline].whoVoted.length;
+        if (votes >= N)
+        {
+            return(true,0);
+        }
+        for(uint i = 0; i < votes; i++)
+        {
+            require(msg.sender != airlineQueue[_newAirline].whoVoted[i], "This airline has already voted");
+        }
+        airlineQueue[_newAirline].whoVoted.push(msg.sender);
+        return (success, ++votes);
         
-        return (success, 0);
     }
 
-
+    function airlineFund
+                        (
+                        )
+                        payable
+                        returns(bool)
+    {
+        require(!data.isAirline(msg.sender), "Airline is already registered");
+        require ((airlineQueue[msg.sender].whoVoted).length >= N, "This account does not have the necessary ammount of votes");
+        uint value = msg.value;
+        require (value == 32 ether, "Airlines need to fund 32 ETH") ;
+        data.fund.value(msg.value);
+        data.registerAirline(msg.sender);
+        return true;
+    }
    /**
     * @dev Register a future flight for insuring.
     *
@@ -123,7 +162,6 @@ contract FlightSuretyApp {
                                 external
                                 pure
     {
-
     }
     
    /**
@@ -337,3 +375,7 @@ contract FlightSuretyApp {
 // endregion
 
 }   
+
+//contract FlightSuretyData {
+ //   function 
+//}

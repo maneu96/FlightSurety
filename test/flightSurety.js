@@ -7,7 +7,7 @@ contract('Flight Surety Tests', async (accounts) => {
   var config;
   before('setup contract', async () => {
     config = await Test.Config(accounts);
-    //await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
+    await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
   });
 
   /****************************************************************************************/
@@ -78,17 +78,19 @@ contract('Flight Surety Tests', async (accounts) => {
 
     // ACT
     try {
-        await config.flightSuretyApp.registerAirline(newAirline, {from: config.firstAirline});
+        await config.flightSuretyApp.registerAirline(newAirline, {from: config.owner});
     }
     catch(e) {
 
     }
     console.log("here")
-    let result = await config.flightSuretyData.isAirline.call(newAirline); 
+    let result = await config.flightSuretyData.isAirline.call(newAirline);
     console.log(result)
     // ASSERT
     assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
-
+    await config.flightSuretyApp.airlineFund({from: newAirline, value: web3.utils.toWei("32")});
+    let result2 = await config.flightSuretyData.isAirline.call(newAirline);
+    assert.equal(result2, true, "Airline should to register another airline if it has provided funding");
   });
  
 

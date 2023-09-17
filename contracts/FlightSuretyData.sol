@@ -12,8 +12,7 @@ contract FlightSuretyData is AirlineRole {
 
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
-    
-
+    address private contractApp;
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -29,7 +28,7 @@ contract FlightSuretyData is AirlineRole {
                                 public 
     {
         contractOwner = msg.sender;
-        //Airlines.push(msg.sender);
+        
     }
 
     /********************************************************************************************/
@@ -59,23 +58,14 @@ contract FlightSuretyData is AirlineRole {
         _;
     }
 
-     /**
-    * @dev Modifier that requires an "Arline" account to be the function caller
-    */
-    modifier requireAirline()
-    {
-        require(isAirline(msg.sender), "Caller is not an Airline");
-        _;
-    }
-
-     /**
+    /* 
     * @dev Modifier that requires A "Passenger" account to be the function caller
-    
-    modifier requirePassenger()
+    */
+    modifier requireAppContract()
     {
-        require(msg.sender == "Passenger", "Caller is not a Passenger");
+        require(msg.sender == contractApp, "Caller is not a Passenger");
         _;
-    } */
+    } 
 
     
     
@@ -113,6 +103,19 @@ contract FlightSuretyData is AirlineRole {
         operational = mode;
     }
 
+    /**
+    * @dev Authorises App to be able to call into the data contract
+    * can only be called by the contract owner
+    */    
+    function authorizeCaller
+                            (
+                                address _app
+                            ) 
+                            external
+                            requireContractOwner 
+    {
+        contractApp = _app;
+    }
 
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
@@ -125,11 +128,12 @@ contract FlightSuretyData is AirlineRole {
     */   
     function registerAirline 
                             (   
+                                address _newAirline
                             )
+                            requireAppContract()
                             external
-                            view
-                            requireAirline
     {
+        addAirline(_newAirline);
     }
 
 
@@ -181,6 +185,7 @@ contract FlightSuretyData is AirlineRole {
                             public
                             payable
     {
+        
     }
 
     function getFlightKey
