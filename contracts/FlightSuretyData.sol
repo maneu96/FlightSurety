@@ -13,10 +13,17 @@ contract FlightSuretyData is AirlineRole {
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
     address private contractApp;
+    mapping(address => Insurance []) passengerInsurances;
+
+    struct Insurance {
+        bool paid;
+        bytes32 flightKey;
+        uint256 balance;
+    }
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
-
+    //event Sender(address indexed s);
 
     /**
     * @dev Constructor
@@ -25,7 +32,8 @@ contract FlightSuretyData is AirlineRole {
     constructor
                                 (
                                 ) 
-                                public 
+                                public
+                                payable 
     {
         contractOwner = msg.sender;
         
@@ -59,11 +67,11 @@ contract FlightSuretyData is AirlineRole {
     }
 
     /* 
-    * @dev Modifier that requires A "Passenger" account to be the function caller
+    * @dev Modifier that requires the "APP" contract to be the function caller
     */
     modifier requireAppContract()
     {
-        require(msg.sender == contractApp, "Caller is not a Passenger");
+        require(msg.sender == contractApp, "Caller is not the APP contract");
         _;
     } 
 
@@ -87,14 +95,38 @@ contract FlightSuretyData is AirlineRole {
         return operational;
     }
 
+    function isAutorized(address x)
+                            public 
+                            view
+                            returns(bool)
+    {
+        return contractApp == x;
+    }
 
+    function isInsured(address _passenger, bytes32 _flightKey)
+                            public
+                            view
+                            returns(bool)
+    {
+        Insurance[] memory insurances =  passengerInsurances[_passenger];
+        if (insurances.length == 0)
+            return false;
+        else
+            return (insurances[0].flightKey == _flightKey && insurances[0].paid == false && insurances[0].balance > 0  && insurances[0].balance < 1 ether);
+    }
+
+   /* function printInsurance() public
+    returns (string)
+    {
+        return
+    }
+*/
     /**
     * @dev Sets contract operations on/off
     *
     * When operational mode is disabled, all write transactions except for this one will fail
     */    
-    function setOperatingStatus
-                            (
+    function setOperatingStatus(
                                 bool mode
                             ) 
                             external
@@ -107,14 +139,15 @@ contract FlightSuretyData is AirlineRole {
     * @dev Authorises App to be able to call into the data contract
     * can only be called by the contract owner
     */    
-    function authorizeCaller
-                            (
+    function authorizeCaller(
                                 address _app
                             ) 
                             external
-                            requireContractOwner 
+                            requireContractOwner
+                            returns(address) 
     {
         contractApp = _app;
+        return contractApp;
     }
 
     /********************************************************************************************/
@@ -126,14 +159,17 @@ contract FlightSuretyData is AirlineRole {
     *      Can only be called from FlightSuretyApp contract
     *
     */   
-    function registerAirline 
-                            (   
+    function registerAirline(   
                                 address _newAirline
                             )
-                            requireAppContract()
+                            requireIsOperational()
+                            requireAppContract
                             external
     {
+        //messageSender = msg.sender;
+        //emit Sender(msg.sender);
         addAirline(_newAirline);
+       
     }
 
 
@@ -141,26 +177,32 @@ contract FlightSuretyData is AirlineRole {
     * @dev Buy insurance for a flight
     *
     */   
-    function buy
-                            (                             
-                            )
-                            external
-                            payable
+    function buy(   
+                    address _passenger,
+                    bytes32 _flightKey,
+                    uint256 value
+                )
+                    requireIsOperational()
+                    requireAppContract
+                    external
+                    payable
     {
-
+        require( isInsured(_passenger, _flightKey) == false ,"Passenger is already insured. Can only purchase insurance for 1 flight");
+        require(value <= 1 ether, "Maximum Value for the insurance is 1 ETH" );
+        //Insurance [] insurances = passengerInsurances[_passenger];
+        //require(insurances.length <= 1, "Passenger can only purchase insurance for 1 flight");
+        //require(nInsurance < 1, "Passenger can only purchase insurance for 1 flight");
+       // for(i=0; i < passengerInsurances[_passenger].length(); i++ )
+        //{   
+        //    insurance = passengerInsurances
+        //    require()
+        //}
+        Insurance memory newInsurance;
+        newInsurance.flightKey = _flightKey;
+        newInsurance.balance = value;
+        passengerInsurances[_passenger].push(newInsurance);
     }
 
-    /**
-     *  @dev Credits payouts to insurees
-    */
-    function creditInsurees
-                                (
-                                )
-                                external
-                                pure
-    {
-    }
-    
 
     /**
      *  @dev Transfers eligible payout funds to insuree
@@ -168,10 +210,32 @@ contract FlightSuretyData is AirlineRole {
     */
     function pay
                             (
+                                address _passenger,
+                                bytes32 _flightKey
                             )
                             external
-                            pure
+                            payable
+                            requireIsOperational()
+                            requireAppContract
     {
+        require(isInsured(_passenger, _flightKey),"Insurance was already paid / There is no insurance to be paid");
+       // require(false,"debug");
+       // passengerInsurances[msg.sender].paid = true;
+        Insurance [] memory insurance = passengerInsurances[_passenger];
+        insurance[0].paid = true;
+        //passengerInsurances[msg.sender].balance;
+        //passengerInsurances[msg.sender].pop();
+        uint256 payout = insurance[0].balance;
+        require(payout == 0.5 ether , "No balance");
+        uint256 payoutAux = payout.mul(3);
+        //address payable to = payable(_passenger);
+        require(payoutAux == 1.5 ether , "No balance");
+        payout= payoutAux.div(2);
+        require(payout == 0.75 ether , "No balance");
+        require(address(this).balance > 0, "No balance in the data smart contract");
+        bool sent= address(uint160(_passenger)).send(payout);
+        require(sent, "Ether not sent");
+        
     }
 
    /**
@@ -184,6 +248,7 @@ contract FlightSuretyData is AirlineRole {
                             )
                             public
                             payable
+                            requireAppContract()
     {
         
     }
@@ -207,7 +272,7 @@ contract FlightSuretyData is AirlineRole {
     */
     function() 
                             external 
-                            payable 
+                            payable
     {
         fund();
     }

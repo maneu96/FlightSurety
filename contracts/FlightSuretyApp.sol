@@ -1,4 +1,5 @@
 pragma solidity ^0.4.25;
+pragma experimental ABIEncoderV2;
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
@@ -29,15 +30,17 @@ contract FlightSuretyApp {
     address private contractOwner;          // Account used to deploy contract
     bool private operational = true; 
     uint nrAirlines;
+    uint nFlights;
     uint private N = 1; //Number of required signatures (Multiparty Consensus)
-    
+
+    bytes32 [] public flightKeys;
     struct Flight {
         bool isRegistered;
         uint8 statusCode;
         uint256 updatedTimestamp;        
         address airline;
     }
-    mapping(bytes32 => Flight) private flights;
+    mapping(bytes32 => Flight) public flights;
 
     struct AirlineCandidate{
         bool funded;
@@ -107,7 +110,47 @@ contract FlightSuretyApp {
     {
         return operational;  // Modify to call data contract's status
     }
+    function isAirline(address airline)
+                        public
+                        view
+                        returns(bool)
+    {
+        return data.isAirline(airline);
+    }
 
+    function isAutorized(address appContract)
+                          external
+                          view
+                          returns(bool)
+    {
+        return data.isAutorized(appContract);
+    }
+
+    function isFlightRegistered(bytes32 _flightKey) public returns(bool)
+    {
+        return flights[_flightKey].isRegistered;
+    }
+
+    function isInsured(address _passenger, bytes32 _flightKey)
+    external
+    view
+    returns(bool)
+    {
+        return data.isInsured(_passenger, _flightKey);
+    }
+
+
+    function getFlights() public view
+    returns (Flight [] memory)
+    {
+        Flight[] memory flightArray = new Flight[](flightKeys.length); 
+        for (uint i =0; i< flightKeys.length; ++i)
+        {
+            flightArray[i] = flights[flightKeys[i]];
+        }
+        
+        return flightArray;
+    }
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -122,6 +165,7 @@ contract FlightSuretyApp {
                                 address _newAirline 
                             )
                             external
+                            requireIsOperational()
                             requireAirline()
                             returns(bool success, uint votes)
     {
@@ -142,19 +186,20 @@ contract FlightSuretyApp {
     function airlineFund
                         (
                         )
+                        external
                         payable
+                        requireIsOperational()
                         returns(bool)
     {
         require(!data.isAirline(msg.sender), "Airline is already registered");
         require ((airlineQueue[msg.sender].whoVoted).length >= N, "This account does not have the necessary ammount of votes");
-        uint value = msg.value;
-        require (value == 32 ether, "Airlines need to fund 32 ETH") ;
-        data.fund.value(msg.value);
+        require (msg.value == 10 ether, "Airlines need to fund the contract with a minumum of 10 ETH") ;
+        data.send(msg.value);
         data.registerAirline(msg.sender);
         ++ nrAirlines;
-        if(nrAirlines >= 5)
+        if(nrAirlines >= 4)
         {
-            N = nrAirlines - 2;
+            N = nrAirlines/2;
         }
         return true;
     }
@@ -164,10 +209,23 @@ contract FlightSuretyApp {
     */  
     function registerFlight
                                 (
+                                    bytes32 flight
                                 )
                                 external
-                                pure
+                                requireIsOperational()
+                                requireAirline()
+                                returns (Flight memory)
     {
+        require(flights[flight].isRegistered== false, "Flight is already registered");
+        Flight memory newFlight;
+        newFlight.isRegistered = true;
+        //flights[flight].statusCode = STATUS_CODE_ON_TIME; //default value
+        newFlight.updatedTimestamp = now;//uint256 updatedTimestamp = ;        
+        newFlight.airline = msg.sender;
+
+        flights[flight] = newFlight;
+        flightKeys.push(flight);
+        return flights[flight];
     }
     
    /**
@@ -181,9 +239,13 @@ contract FlightSuretyApp {
                                     uint256 timestamp,
                                     uint8 statusCode
                                 )
-                                internal
-                                pure
+                                
+                                public /* internal */
+                                requireIsOperational()
     {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        flights[flightKey].statusCode = statusCode;
+        
     }
 
 
@@ -195,6 +257,7 @@ contract FlightSuretyApp {
                             uint256 timestamp                            
                         )
                         external
+                        requireIsOperational()
     {
         uint8 index = getRandomIndex(msg.sender);
 
@@ -208,7 +271,27 @@ contract FlightSuretyApp {
         emit OracleRequest(index, airline, flight, timestamp);
     } 
 
+    function buyInsurance (
+                            bytes32 _flightKey
+    )
+                            public
+                            payable
+                            requireIsOperational()
+    {
+        require(! data.isAirline(msg.sender), "Airlines cannot purchase insurances");
+        data.buy(msg.sender, _flightKey, msg.value);
+    }
 
+    function withdrawInsurance(
+                            bytes32 _flightKey
+
+    )
+                            public
+                            requireIsOperational()
+    {
+        require(flights[_flightKey].statusCode == STATUS_CODE_LATE_AIRLINE, "Passenger does not have a right to be refunded");
+        data.pay(msg.sender,_flightKey);
+    }
 // region ORACLE MANAGEMENT
 
     // Incremented to add pseudo-randomness at various points
@@ -327,8 +410,7 @@ contract FlightSuretyApp {
                             string flight,
                             uint256 timestamp
                         )
-                        pure
-                        internal
+                        public
                         returns(bytes32) 
     {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
