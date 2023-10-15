@@ -57,12 +57,14 @@
             <input type="text" id="register-flight-name" placeholder="Flight name" style="width: 400px;">
         </div>
 
-        <div class="row top-20">
-            <input type="text" id="register-flight-airline-address" placeholder="Airline Address" style="width: 400px;">
-        </div>
 
         <div class="row top-20">
-            <input type="text" id="register-flight-timestamp" placeholder="Timestamp" style="width: 400px;">
+            <input type="text" id="register-flight-timestamp" placeholder="Departure Time" style="width: 400px;">
+        </div>
+
+
+        <div class="row top-20">
+            <input type="text" id="register-flight-airline-address" placeholder="Airline Address" style="width: 400px;">
         </div>
 
         <div class="row top-20">
@@ -81,25 +83,17 @@
 
     <main class="container" class="top-20">
         <h2>Insure Flight</h2>
-        
         <div class="row top-20">
-            <input type="text" id="flight-name" placeholder="Flight Name" style="width: 400px;">
-        </div>
-
-        <div class="row top-20">
-            <input type="text" id="insurance-airline-address" placeholder="Airline Address" style="width: 400px;">
-        </div>
-
-        <div class="row top-20">
-            <input type="text" id="flight-timestamp" placeholder="Timestamp" style="width: 400px;">
-        </div>
-
-        <div class="row top-20">
-            <input type="text" id="insurance-amount" placeholder="1 or less ETH" style="width: 400px;">
+            <label class="form">Flight Key</label>
+            <input type="text" id="insurance-flight-key" placeholder="Flight Key" style="width: 400px;">
+            <label class="form">Insurance Premium</label>
+            <input type="text" id="insurance-ammount" placeholder="1 or less ETH" style="width: 400px;">
         </div>
         <div class="row top-20">
+            
             <btn class="btn btn-primary" id="submit-buy">Buy</btn>
             <btn class="btn btn-primary" id="submit-oracle" style="margin-left: 10px;">Fetch Flight Status</btn>
+            <btn class="btn btn-primary" id="is-insured" style="margin-left: 10px;" >Is Insured</btn>
         </div>
 
         <div style="margin-top: 40px;">
@@ -114,9 +108,12 @@
         <h2>Passenger Detail</h2>
 
         <div class="row top-20">
+            <label class="form">Check Insurance</label>
+        </div>
+        <div class="row top-20">
             <label class="form">Check Balance</label>
-            <input type="text" id="passenger-address" placeholder="Passenger Address" style="width: 400px;">
-            <btn class="btn btn-primary" id="check-balance">Check Credit Pending to Withdraw</btn>
+            <input type="text" id="withdraw-flight-key" placeholder="Flight Key" style="width: 400px;">
+            <btn class="btn btn-primary" id="check-balance" style="margin-left: 10px;">Check Credit Pending to Withdraw</btn>
             <btn class="btn btn-primary" id="withdraw-balance" style="margin-left: 10px;">Withdraw</btn>
         </div>
 

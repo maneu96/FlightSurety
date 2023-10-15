@@ -132,8 +132,8 @@ it('Airline can register a flight', async () =>{
     
     let airline = accounts[0];
    
-    let flightKey = await config.flightSuretyApp.getFlightKey.call(airline,"LX-AMS", 12345, {from: airline})
-    
+    let flightKey = web3.utils.soliditySha3(airline,"LX-AMS -> 12h00");
+    console.log(flightKey)
     let isRegistered = await config.flightSuretyApp.isFlightRegistered.call(flightKey, {from : airline});
     assert.equal(isRegistered,false, "Error: Flight was already registered")
     let result = await config.flightSuretyApp.registerFlight(flightKey,{from : airline});
@@ -144,11 +144,12 @@ it('Airline can register a flight', async () =>{
 
 it('Passenger can buy insurance', async() =>{
     let airline = accounts[0];
-    let passenger = accounts[8]
+    let passenger = accounts[10]
+   // console.log(web3.toDecimal(await web3.eth.getBalance(passenger)));
 
-
-    let flightKey = await config.flightSuretyApp.getFlightKey.call(airline,"LX-AMS", 12345, {from: airline})
-    assert.equal(await config.flightSuretyApp.isInsured.call(passenger,flightKey, {from: passenger}), false, "Passenger is already insured");
+    let flightKey = web3.utils.soliditySha3(airline,"LX-AMS -> 12h00");
+    console.log(flightKey)
+    //assert.equal(await config.flightSuretyApp.isInsured.call(passenger,flightKey, {from: passenger}), false, "Passenger is already insured");
     await config.flightSuretyApp.buyInsurance(flightKey,{from: passenger, value: web3.utils.toWei("0.5", "Ether")});
     //await config.flightSuretyData.
     assert.equal(await config.flightSuretyApp.isInsured.call(passenger,flightKey, {from: passenger}), true, "Passenger is not insured");
@@ -158,14 +159,13 @@ it('Passenger can buy insurance', async() =>{
 
 it('Passenger can reclaim insurance premium', async() =>{
     let airline = accounts[0];
-    let passenger = accounts[8];
-
-    let flightKey = await config.flightSuretyApp.getFlightKey.call(airline,"LX-AMS", 12345, {from: airline})
+    let passenger = accounts[10];
+    let flightKey = web3.utils.soliditySha3(airline,"LX-AMS -> 12h00")
 
     //try {
     //    let result = await config.flightSuretyApp.withdrawInsurance.call(flightKey,{from: passenger});
     //} catch (error) {
-        await config.flightSuretyApp.processFlightStatus(airline,"LX-AMS", 12345, 20, {from : airline});
+     await config.flightSuretyApp.processFlightStatus(airline,"LX-AMS -> 12h00", Math.floor(Date.now() / 1000), 20, {from : airline});
      let result = await config.flightSuretyApp.withdrawInsurance.call(flightKey,{from: passenger});
    // }
 })

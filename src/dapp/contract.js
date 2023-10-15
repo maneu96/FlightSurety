@@ -15,6 +15,7 @@ export default class Contract {
         this.Account = null;
         this.airlines = [];
         this.passengers = [];
+        this.Flights = [];
     }
 
     initialize(callback) {
@@ -55,6 +56,15 @@ export default class Contract {
         this.Account = accounts[0];
     }
     
+    async processFlightStatus(airline,flight,timeStamp,statusCode){
+        let self = this;
+        console.log("HERE");
+        await self.flightSuretyApp.methods.processFlightStatus(airline,flight,timeStamp,statusCode).send({from: airline})
+    }
+    async isFlightRegistered(flightKey){
+        let self = this;
+        return  await self.flightSuretyApp.methods.isFlightRegistered(flightKey).call();
+    }
 
     isOperational(callback) {
        let self = this;
@@ -92,9 +102,6 @@ export default class Contract {
 
     airlineFund(callback){
         let self = this;
-        console.log("WTF IS GOING ON CRL")
-        console.log(self.Account);
-        console.log("Authorized?")
         self.flightSuretyData.methods.authorizeCaller(self.flightSuretyApp._address).call({from: self.owner},(error,result)=>{
             console.log(result);
         });
@@ -111,26 +118,49 @@ export default class Contract {
     }
     getFlightKey(airlineAddress,flightName,timeStamp,callback){
         let self= this;
-        console.log(self.flightSuretyApp.methods);
-        self.flightSuretyApp.methods.getFlightKey(airlineAddress,flightName,timeStamp).call((error,result) =>{
-            callback(error,result);
-        });
+       // console.log(self.flightSuretyApp.methods);
+        let flightKey = self.web3.utils.soliditySha3(airlineAddress,flightName);
+        callback(null, flightKey);
     }
-    registerFlight(flightKey,callback){
+    async registerFlight(flightKey){
         let self = this;
-        self.flightSuretyApp.methods.registerFlight(flightKey).call( {from: self.Account}, (error,result)=>{
-            callback(error,result);
-        });
+        //console.log(self.Account);
+        var block = await self.web3.eth.getBlock("latest");
+        return await self.flightSuretyApp.methods.registerFlight(flightKey).send( {from: self.Account, gas: block.gasLimit})
     }
 
-    getFlights(callback){
+    async getFlights(){
         let self = this;
-        console.log("here")
-        console.log(self.flightSuretyApp.methods);
-        self.flightSuretyApp.methods.getFlights.call((error,result)=>{
-            console.log(error,result);
+        console.log("ere")
+        // console.log(self.flightSuretyApp.methods);
+        return await self.flightSuretyApp.methods.getFlights()
+    }
+
+
+    async isInsured(flightKey){
+        let self = this;
+        console.log(await self.flightSuretyApp.methods.isInsured(self.Account,flightKey).call())
+        return await self.flightSuretyApp.methods.isInsured(self.Account,flightKey).call();
+    }
+
+    buyInsurance(flightKey,insuranceValue,callback){
+        let self = this;
+        console.log(flightKey)
+        console.log(self.Account);
+        self.flightSuretyApp.methods.buyInsurance(flightKey).send({from:self.Account, value: insuranceValue },  (error,result)=>{
             callback(error,result);
         });
     }
+    async withdrawInsurance(flightKey){
+        let self = this;
+        console.log(self.Account)
+        let result = await self.flightSuretyApp.methods.withdrawInsurance(flightKey).send({from: self.Account});
+        return result;
+    }
     
+    async ammountToPay(flightKey){
+        let self = this;
+        console.log(flightKey);
+        return await self.flightSuretyApp.methods.ammountToPay(self.Account,flightKey).call({from:self.Account});
+    }
 }

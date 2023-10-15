@@ -35,6 +35,7 @@ contract FlightSuretyApp {
 
     bytes32 [] public flightKeys;
     struct Flight {
+        bytes32 flightKey;
         bool isRegistered;
         uint8 statusCode;
         uint256 updatedTimestamp;        
@@ -126,18 +127,19 @@ contract FlightSuretyApp {
         return data.isAutorized(appContract);
     }
 
-    function isFlightRegistered(bytes32 _flightKey) public returns(bool)
+    function isFlightRegistered(bytes32 _flightKey) public view returns(bool)
     {
         return flights[_flightKey].isRegistered;
     }
 
     function isInsured(address _passenger, bytes32 _flightKey)
-    external
+    public
     view
     returns(bool)
     {
         return data.isInsured(_passenger, _flightKey);
     }
+
 
 
     function getFlights() public view
@@ -150,6 +152,14 @@ contract FlightSuretyApp {
         }
         
         return flightArray;
+    }
+
+
+    function ammountToPay(address _passenger, bytes32 flightKey) external view
+    returns(uint256){
+       
+        uint ammount = data.ammountToPay(_passenger, flights[flightKey].statusCode == STATUS_CODE_LATE_AIRLINE);
+        return ammount;
     }
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
@@ -211,21 +221,22 @@ contract FlightSuretyApp {
                                 (
                                     bytes32 flight
                                 )
-                                external
+                                public
                                 requireIsOperational()
                                 requireAirline()
-                                returns (Flight memory)
+                                returns (bool, bytes32)
     {
         require(flights[flight].isRegistered== false, "Flight is already registered");
-        Flight memory newFlight;
-        newFlight.isRegistered = true;
-        //flights[flight].statusCode = STATUS_CODE_ON_TIME; //default value
-        newFlight.updatedTimestamp = now;//uint256 updatedTimestamp = ;        
-        newFlight.airline = msg.sender;
-
-        flights[flight] = newFlight;
+    //    Flight storage newFlight;
+        flights[flight].isRegistered = true;
+        flights[flight].statusCode = STATUS_CODE_ON_TIME; //default value
+        flights[flight].updatedTimestamp = now;//uint256 updatedTimestamp = ;        
+        flights[flight].airline = msg.sender;
+        flights[flight].flightKey = flight;
+        //flights[flight] = newFlight;
         flightKeys.push(flight);
-        return flights[flight];
+        return (isFlightRegistered(flight), flight);
+
     }
     
    /**
@@ -235,17 +246,18 @@ contract FlightSuretyApp {
     function processFlightStatus
                                 (
                                     address airline,
-                                    string memory flight,
+                                    bytes32 flightKey,
                                     uint256 timestamp,
                                     uint8 statusCode
                                 )
                                 
-                                public /* internal */
+                                public
+                                view
                                 requireIsOperational()
     {
-        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        //bytes32 flightKey = keccak256(abi.encodePacked(airline,flight));
         flights[flightKey].statusCode = statusCode;
-        
+        flights[flightKey].updatedTimestamp = timestamp;
     }
 
 
@@ -279,6 +291,9 @@ contract FlightSuretyApp {
                             requireIsOperational()
     {
         require(! data.isAirline(msg.sender), "Airlines cannot purchase insurances");
+        require(isFlightRegistered(_flightKey), "Flight is not registered");
+        require(flights[_flightKey].statusCode == STATUS_CODE_ON_TIME, "Flight is not up for Insuring");
+        require(data.send(msg.value), "Value not sent to the data contract");
         data.buy(msg.sender, _flightKey, msg.value);
     }
 
@@ -399,7 +414,8 @@ contract FlightSuretyApp {
             emit FlightStatusInfo(airline, flight, timestamp, statusCode);
 
             // Handle flight status as appropriate
-            processFlightStatus(airline, flight, timestamp, statusCode);
+            bytes32 flightKey = keccak256(abi.encodePacked(airline, flight)); 
+            processFlightStatus(airline, flightKey, timestamp, statusCode);
         }
     }
 

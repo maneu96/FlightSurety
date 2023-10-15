@@ -13,12 +13,13 @@ contract FlightSuretyData is AirlineRole {
     address private contractOwner;                                      // Account used to deploy contract
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
     address private contractApp;
-    mapping(address => Insurance []) passengerInsurances;
+    mapping(address => Insurance) public passengerInsurances;
 
     struct Insurance {
-        bool paid;
         bytes32 flightKey;
         uint256 balance;
+        bool insured;
+        bool paid;
     }
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -108,13 +109,24 @@ contract FlightSuretyData is AirlineRole {
                             view
                             returns(bool)
     {
-        Insurance[] memory insurances =  passengerInsurances[_passenger];
-        if (insurances.length == 0)
-            return false;
-        else
-            return (insurances[0].flightKey == _flightKey && insurances[0].paid == false && insurances[0].balance > 0  && insurances[0].balance < 1 ether);
+        Insurance memory insurances =  passengerInsurances[_passenger];
+        return insurances.flightKey == _flightKey && insurances.balance > 0  && insurances.balance < 1 ether;
     }
-
+    
+    function isInsurancePayed(address _passenger) public view returns (bool){
+        return passengerInsurances[_passenger].paid;
+    }
+    function ammountToPay(address _passenger, bool payoff) external view returns (uint256){
+        if (!payoff)
+            return 0;
+        else{
+            uint256 ammount = passengerInsurances[_passenger].balance;
+            ammount = ammount.mul(3);
+            ammount = ammount.div(2);
+            return ammount;
+        }
+            
+    }
    /* function printInsurance() public
     returns (string)
     {
@@ -189,18 +201,17 @@ contract FlightSuretyData is AirlineRole {
     {
         require( isInsured(_passenger, _flightKey) == false ,"Passenger is already insured. Can only purchase insurance for 1 flight");
         require(value <= 1 ether, "Maximum Value for the insurance is 1 ETH" );
-        //Insurance [] insurances = passengerInsurances[_passenger];
-        //require(insurances.length <= 1, "Passenger can only purchase insurance for 1 flight");
-        //require(nInsurance < 1, "Passenger can only purchase insurance for 1 flight");
-       // for(i=0; i < passengerInsurances[_passenger].length(); i++ )
-        //{   
-        //    insurance = passengerInsurances
-        //    require()
-        //}
-        Insurance memory newInsurance;
-        newInsurance.flightKey = _flightKey;
-        newInsurance.balance = value;
-        passengerInsurances[_passenger].push(newInsurance);
+    
+        passengerInsurances[_passenger].flightKey = _flightKey;
+        
+        passengerInsurances[_passenger].balance = value;
+
+        require(passengerInsurances[_passenger].paid == false, "Insurance was already paid");
+       
+        //passengerInsurances[_passenger].insured= true;
+        //Insurances[0] = newInsurance;
+       // passengerInsurances[_passenger].push(passengerInsurances[_passenger});
+        
     }
 
 
@@ -221,17 +232,15 @@ contract FlightSuretyData is AirlineRole {
         require(isInsured(_passenger, _flightKey),"Insurance was already paid / There is no insurance to be paid");
        // require(false,"debug");
        // passengerInsurances[msg.sender].paid = true;
-        Insurance [] memory insurance = passengerInsurances[_passenger];
-        insurance[0].paid = true;
+       // Insurance  memory insurance =;
+        passengerInsurances[_passenger].paid = true;
         //passengerInsurances[msg.sender].balance;
         //passengerInsurances[msg.sender].pop();
-        uint256 payout = insurance[0].balance;
-        require(payout == 0.5 ether , "No balance");
+        uint256 payout =  passengerInsurances[_passenger].balance;
         uint256 payoutAux = payout.mul(3);
         //address payable to = payable(_passenger);
-        require(payoutAux == 1.5 ether , "No balance");
         payout= payoutAux.div(2);
-        require(payout == 0.75 ether , "No balance");
+        passengerInsurances[_passenger].balance = 0;
         require(address(this).balance > 0, "No balance in the data smart contract");
         bool sent= address(uint160(_passenger)).send(payout);
         require(sent, "Ether not sent");
