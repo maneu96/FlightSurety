@@ -36,7 +36,7 @@ contract('Oracles', async (accounts) => {
   it('can request flight status', async () => {
     
     // ARRANGE
-    let flight = 'ND1309'; // Course number
+    let flight = web3.utils.soliditySha3(airline,"LX-AMS -> 12h00"); // Course number
     let timestamp = Math.floor(Date.now() / 1000);
 
     // Submit a request for oracles to get status information for a flight
@@ -55,10 +55,12 @@ contract('Oracles', async (accounts) => {
 
         try {
           // Submit a response...it will only be accepted if there is an Index match
-          await config.flightSuretyApp.submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight, timestamp, STATUS_CODE_ON_TIME, { from: accounts[a] });
+          await config.flightSuretyApp.submitOracleResponse(oracleIndexes[idx], config.firstAirline, flight, timestamp, 20, { from: accounts[a] });
+          console.log(await config.flightSuretyApp.isFlightDelayed(flight));
 
         }
         catch(e) {
+          console.log(e);
           // Enable this when debugging
            console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight, timestamp);
         }

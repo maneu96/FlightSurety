@@ -163,4 +163,9 @@ export default class Contract {
         console.log(flightKey);
         return await self.flightSuretyApp.methods.ammountToPay(self.Account,flightKey).call({from:self.Account});
     }
+    
+    async isFlightDelayed(flightKey){
+        let self = this;
+        return await self.flightSuretyApp.methods.isFlightDelayed(flightKey).call();
+    }
 }

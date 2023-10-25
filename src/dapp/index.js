@@ -146,8 +146,6 @@ import './flightsurety.css';
             console.log(flightKey);
             let result = await contract.ammountToPay(flightKey);
             console.log(result);
-            console.log(contract.owner);
-            await contract.processFlightStatus(contract.owner,flightKey,1234,20);
             result = await contract.ammountToPay(flightKey);
             console.log(result);
             display("display-wrapper-passenger-detail",'Passenger','Value Available to Withdraw',[{ label: ':', value: result }]);
@@ -170,10 +168,13 @@ import './flightsurety.css';
             let flightKey = DOM.elid('insurance-flight-key').value;
             // Write transaction
             //await contract.getAccount();
-            result =  contract.fetchFlightStatus(flightKey);
-            console.log("Oracles")
-            console.log(result);
-            display("display-wrapper-passenger-detail",'Passenger','Value withdraw',[{ label: 'Tx', value: result.transactionHash }]);
+            result =  contract.fetchFlightStatus(flightKey, async  (error, result) => {
+            console.log(flightKey)
+            let delayed = await contract.isFlightDelayed(flightKey);
+            console.log(delayed);
+            display("display-wrapper-passenger-detail",'Flight','Status Update',[{ label: "Compensation?", value: delayed }]);
+            });
+            
         
         })
     

@@ -131,6 +131,9 @@ contract FlightSuretyApp {
     {
         return flights[_flightKey].isRegistered;
     }
+    function isFlightDelayed(bytes32 _flightKey) public view returns(bool){
+        return flights[_flightKey].statusCode == STATUS_CODE_LATE_AIRLINE;
+    }
 
     function isInsured(address _passenger, bytes32 _flightKey)
     public
@@ -265,7 +268,7 @@ contract FlightSuretyApp {
     function fetchFlightStatus
                         (
                             address airline,
-                            string flight,
+                            bytes32 flight,
                             uint256 timestamp                            
                         )
                         external
@@ -341,14 +344,14 @@ contract FlightSuretyApp {
     mapping(bytes32 => ResponseInfo) private oracleResponses;
 
     // Event fired each time an oracle submits a response
-    event FlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 status);
+    event FlightStatusInfo(address airline, bytes32 flight, uint256 timestamp, uint8 status, bytes32 flightKey);
 
-    event OracleReport(address airline, string flight, uint256 timestamp, uint8 status);
+    event OracleReport(address airline, bytes32 flight, uint256 timestamp, uint8 status);
 
     // Event fired when flight status request is submitted
     // Oracles track this and if they have a matching index
     // they fetch data and submit a response
-    event OracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
+    event OracleRequest(uint8 index, address airline, bytes32 flight, uint256 timestamp);
 
 
     // Register an oracle with the contract
@@ -392,7 +395,7 @@ contract FlightSuretyApp {
                         (
                             uint8 index,
                             address airline,
-                            string flight,
+                            bytes32 flight,
                             uint256 timestamp,
                             uint8 statusCode
                         )
@@ -410,12 +413,12 @@ contract FlightSuretyApp {
         // oracles respond with the *** same *** information
         emit OracleReport(airline, flight, timestamp, statusCode);
         if (oracleResponses[key].responses[statusCode].length >= MIN_RESPONSES) {
-
-            emit FlightStatusInfo(airline, flight, timestamp, statusCode);
-
-            // Handle flight status as appropriate
+               
+                // Handle flight status as appropriate
             bytes32 flightKey = keccak256(abi.encodePacked(airline, flight)); 
-            processFlightStatus(airline, flightKey, timestamp, statusCode);
+            emit FlightStatusInfo(airline, flight, timestamp, statusCode, flightKey);
+            
+            processFlightStatus(airline, flight, timestamp, statusCode);
         }
     }
 
