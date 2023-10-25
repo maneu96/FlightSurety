@@ -2,7 +2,11 @@
 
 FlightSurety is a sample application project for Udacity's Blockchain course.
 
-![Alt text](images/FlightInsurance.png?raw=true "Title")
+![Flight Registration](images/FlightInsurance.png?raw=true "Title")
+
+![Insuring a Flight](images/FlightInsurance.png?raw=true "Title")
+
+![Asking for a refund](images/FlightInsurance.png?raw=true "Title")
 
 ## Install
 
